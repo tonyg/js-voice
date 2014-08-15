@@ -1,0 +1,1 @@
+['_opus_strerror','_opus_encoder_get_size','_opus_encoder_init','_opus_encode','_opus_encode_float','_opus_encoder_ctl','_opus_decoder_get_size','_opus_decoder_init','_opus_decode','_opus_decode_float','_speex_echo_state_init','_speex_echo_state_destroy','_speex_echo_cancellation','_speex_echo_capture','_speex_echo_playback','_speex_echo_state_reset']

@@ -2,29 +2,27 @@ OPUS := opus-1.1
 EMCC_OPTS := -O1 -s LINKABLE=1
 SRCDIR := ../src
 
-all: $(SRCDIR)/speexdsp.js $(SRCDIR)/opus.js
+all: $(SRCDIR)/c_code.js
 
-$(SRCDIR)/speexdsp.js: speexdsp-git $(SRCDIR)/speexdsp-pre.js $(SRCDIR)/speexdsp-post.js
+$(SRCDIR)/c_code.js: \
+		speexdsp-git \
+		$(OPUS) \
+		$(SRCDIR)/c_code-pre.js \
+		$(SRCDIR)/c_code-post.js \
+		$(SRCDIR)/c_code.exports
 	emcc $(EMCC_OPTS) \
-		-s EXPORTED_FUNCTIONS="$$(cat $(SRCDIR)/speexdsp.exports)" \
+		-s EXPORTED_FUNCTIONS="$$(cat $(SRCDIR)/c_code.exports)" \
 		-o $@ \
-		--pre-js $(SRCDIR)/speexdsp-pre.js \
-		--post-js $(SRCDIR)/speexdsp-post.js \
-		$(wildcard speexdsp-git/libspeexdsp/.libs/*.o)
+		--pre-js $(SRCDIR)/c_code-pre.js \
+		--post-js $(SRCDIR)/c_code-post.js \
+		$(wildcard speexdsp-git/libspeexdsp/.libs/*.o) \
+		$(OPUS)/.libs/libopus.a
 
 speexdsp-git:
 	unzip speexdsp-git.zip
 	(cd speexdsp-git; ./autogen.sh)
 	(cd speexdsp-git; emconfigure ./configure --prefix=`pwd`/dist)
 	(cd speexdsp-git; emmake make)
-
-$(SRCDIR)/opus.js: $(OPUS) $(SRCDIR)/opus-pre.js $(SRCDIR)/opus-post.js
-	emcc $(EMCC_OPTS) \
-		-s EXPORTED_FUNCTIONS="$$(cat $(SRCDIR)/opus.exports)" \
-		-o $@ \
-		--pre-js $(SRCDIR)/opus-pre.js \
-		--post-js $(SRCDIR)/opus-post.js \
-		$(OPUS)/.libs/libopus.a
 
 $(OPUS): $(OPUS).tar.gz
 	tar -zxvf $<
@@ -33,8 +31,7 @@ $(OPUS): $(OPUS).tar.gz
 		emmake make)
 
 clean:
-	rm -f $(SRCDIR)/speexdsp.js
-	rm -f $(SRCDIR)/opus.js
+	rm -f $(SRCDIR)/c_code.js
 
 veryclean: clean
 	rm -rf speexdsp-git

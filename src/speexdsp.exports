@@ -1,1 +1,0 @@
-['_speex_echo_state_init','_speex_echo_state_destroy','_speex_echo_cancellation','_speex_echo_capture','_speex_echo_playback','_speex_echo_state_reset']

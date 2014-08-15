@@ -1,1 +1,0 @@
-['_opus_strerror','_opus_encoder_get_size','_opus_encoder_init','_opus_encode','_opus_encode_float','_opus_encoder_ctl/int32','_opus_encoder_ctl->int32','_opus_decoder_get_size','_opus_decoder_init','_opus_decode','_opus_decode_float']

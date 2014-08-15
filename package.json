@@ -1,0 +1,22 @@
+{
+    "name": "js-voice",
+    "version": "0.0.0",
+    "description": "Emscripten-compiled Opus codec and Speex DSP echo cancellation library",
+    "homepage": "https://github.com/tonyg/js-voice",
+    "main": "src/main.js",
+    "scripts": {
+	"clean": "rm -f dist/*",
+	"build-debug": "browserify --noparse=src/c_code.js src/main.js -s Voice -o dist/voice.js",
+	"build-min": "browserify --noparse=src/c_code.js src/main.js -s Voice -o dist/_voice.js && uglifyjs dist/_voice.js -o dist/voice.min.js && rm dist/_voice.js",
+	"build": "npm run build-debug && npm run build-min",
+	"watch": "watchify src/main.js -d -s Voice -o dist/voice.js",
+	"prepublish": "npm run build"
+    },
+    "author": "Tony Garnock-Jones <tonyg@ccs.neu.edu>",
+    "devDependencies": {
+	"watchify": "^0.6.1",
+	"uglify-js": "^2.4.12",
+	"browserify": "^3.30.4",
+	"mocha": "^1.17.1"
+    }
+}
