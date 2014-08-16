@@ -1,5 +1,5 @@
 OPUS := opus-1.1
-EMCC_OPTS := -O1 -s LINKABLE=1
+EMCC_OPTS := -O3 --memory-init-file 0 -s LINKABLE=1
 SRCDIR := ../src
 
 all: $(SRCDIR)/c_code.js
