@@ -5,10 +5,8 @@
     "homepage": "https://github.com/tonyg/js-voice",
     "main": "src/main.js",
     "scripts": {
-	"clean": "rm -f dist/*",
-	"build-debug": "browserify --noparse=src/c_code.js src/main.js -s Voice -o dist/voice.js",
-	"build-min": "browserify --noparse=src/c_code.js src/main.js -s Voice -o dist/_voice.js && uglifyjs dist/_voice.js -o dist/voice.min.js && rm dist/_voice.js",
-	"build": "npm run build-debug && npm run build-min",
+	"clean": "make clean",
+	"build": "browserify --noparse=src/c_code.js src/main.js -s Voice -o dist/voice.js",
 	"watch": "watchify src/main.js -d -s Voice -o dist/voice.js",
 	"prepublish": "npm run build"
     },
