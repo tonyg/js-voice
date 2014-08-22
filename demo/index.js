@@ -1,62 +1,3 @@
-var AudioContext = (window.AudioContext || window.webkitAudioContext);
-var getUserMedia =
-    (navigator.getUserMedia ||
-     navigator.webkitGetUserMedia ||
-     navigator.mozGetUserMedia ||
-     navigator.msGetUserMedia).bind(navigator);
-
-function SimpleMonoDriver(options) {
-  var self = this;
-
-  options = options || {};
-  self.frameDuration = options.frameDuration || (1/100); // seconds
-  self.processorBufferSize = options.processorBufferSize || 1024;
-  self.inputBufferSeconds = options.inputBufferSeconds || 0.5;
-  self.outputBufferSeconds = options.outputBufferSeconds || 0.5;
-  self.onerror = options.onerror || null;
-  self.oninput = null;
-  self.onoutput = null;
-
-  self.context = new AudioContext();
-  self.sampleRate = self.context.sampleRate;
-  self.frameSize = Math.ceil(self.sampleRate * self.frameDuration);
-
-  self.inputBuffer = new Voice.CircularBuffer(self.sampleRate * self.inputBufferSeconds);
-  self.muxBuffer = new Voice.MuxBuffer(self.sampleRate * self.outputBufferSeconds);
-
-  getUserMedia(
-    {audio: true, video: false},
-    function (stream) {
-      self.stream = stream; // prevent GC of stream, which causes audio drops
-      self.sourceNode = self.context.createMediaStreamSource(stream);
-      self.processorNode = self.context.createScriptProcessor(self.processorBufferSize, 1, 1);
-
-      self.processorNode.onaudioprocess = function (e) {
-  	self.inputBuffer.writeFromChannel(e.inputBuffer, 0);
-	if (self.oninput) {
-	  self.oninput();
-	}
-
-	var channelDataBuffer = e.outputBuffer.getChannelData(0);
-	self.muxBuffer.readInto(channelDataBuffer);
-	if (self.onoutput) {
-	  self.onoutput(channelDataBuffer);
-	}
-      };
-
-      self.sourceNode.connect(self.processorNode);
-      self.processorNode.connect(self.context.destination);
-    },
-    function (err) {
-      if (self.onerror) {
-	self.onerror(err);
-      }
-    }
-  );
-}
-
-///////////////////////////////////////////////////////////////////////////
-
 var D;
 
 function main () {
@@ -78,7 +19,7 @@ function main () {
     ctx.stroke();
   }
 
-  D = new SimpleMonoDriver({
+  D = new Voice.SimpleMonoDriver({
     onerror: function (e) {
       console.error(e);
     }

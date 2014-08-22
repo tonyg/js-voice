@@ -3,6 +3,16 @@
 var C = require("./c_code.js");
 
 //---------------------------------------------------------------------------
+// Polyfill access to AudioContext and getUserMedia
+
+var AudioContext = (window.AudioContext || window.webkitAudioContext);
+var getUserMedia =
+    (navigator.getUserMedia ||
+     navigator.webkitGetUserMedia ||
+     navigator.mozGetUserMedia ||
+     navigator.msGetUserMedia).bind(navigator);
+
+//---------------------------------------------------------------------------
 // Allocation
 
 function MALLOC(nbytes) {
@@ -479,11 +489,67 @@ function resample(dest, destSampleRate, src, srcSampleRate) {
 }
 
 //---------------------------------------------------------------------------
+// SimpleMonoDriver
+
+function SimpleMonoDriver(options) {
+  var self = this;
+
+  options = options || {};
+  self.frameDuration = options.frameDuration || (1/100); // seconds
+  self.processorBufferSize = options.processorBufferSize || 1024;
+  self.inputBufferSeconds = options.inputBufferSeconds || 0.5;
+  self.outputBufferSeconds = options.outputBufferSeconds || 0.5;
+  self.onerror = options.onerror || null;
+  self.oninput = null;
+  self.onoutput = null;
+
+  self.context = new AudioContext();
+  self.sampleRate = self.context.sampleRate;
+  self.frameSize = Math.ceil(self.sampleRate * self.frameDuration);
+
+  self.inputBuffer = new CircularBuffer(self.sampleRate * self.inputBufferSeconds);
+  self.muxBuffer = new MuxBuffer(self.sampleRate * self.outputBufferSeconds);
+
+  getUserMedia(
+    {audio: true, video: false},
+    function (stream) {
+      self.stream = stream; // prevent GC of stream, which causes audio drops
+      self.sourceNode = self.context.createMediaStreamSource(stream);
+      self.processorNode = self.context.createScriptProcessor(self.processorBufferSize, 1, 1);
+
+      self.processorNode.onaudioprocess = function (e) {
+  	self.inputBuffer.writeFromChannel(e.inputBuffer, 0);
+	if (self.oninput) {
+	  self.oninput();
+	}
+
+	var channelDataBuffer = e.outputBuffer.getChannelData(0);
+	self.muxBuffer.readInto(channelDataBuffer);
+	if (self.onoutput) {
+	  self.onoutput(channelDataBuffer);
+	}
+      };
+
+      self.sourceNode.connect(self.processorNode);
+      self.processorNode.connect(self.context.destination);
+    },
+    function (err) {
+      if (self.onerror) {
+	self.onerror(err);
+      }
+    }
+  );
+}
+
+//---------------------------------------------------------------------------
 
 module.exports.C = C;
+module.exports.AudioContext = AudioContext;
+module.exports.getUserMedia = getUserMedia;
 module.exports.SpeexEchoState = SpeexEchoState;
 module.exports.OpusEncoder = OpusEncoder;
 module.exports.OpusDecoder = OpusDecoder;
 module.exports.CircularBuffer = CircularBuffer;
 module.exports.MuxBuffer = MuxBuffer;
 module.exports.resample = resample;
+module.exports.SimpleMonoDriver = SimpleMonoDriver;
