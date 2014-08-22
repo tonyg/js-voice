@@ -296,8 +296,8 @@ OpusDecoder.prototype.decode = function (inputData, decodeFec, frameSizeLimit) {
 //---------------------------------------------------------------------------
 
 function CircularBuffer(length) {
-  this.length = length;
-  this.buffer = new Float32Array(length);
+  this.length = length | 0;
+  this.buffer = new Float32Array(this.length);
   this.readPos = 0;
   this.writePos = 0;
 };
