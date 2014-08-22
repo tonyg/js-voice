@@ -1,29 +1,13 @@
 var D;
 
 function main () {
-  var graphCanvas = document.getElementById('graphCanvas');
-  var ctx = graphCanvas.getContext("2d");
-
-  function chartData(a) {
-    ctx.fillStyle = "#eeeeff";
-    ctx.fillRect(0, 0, graphCanvas.width, graphCanvas.height);
-    var hscale = graphCanvas.width / a.length;
-    var vofs = graphCanvas.height / 2;
-    var vscale = graphCanvas.height / 2;
-    ctx.beginPath();
-    ctx.moveTo(0, vofs);
-    for (var i = 0; i < a.length; i++) {
-      ctx.lineTo(i * hscale, vofs + (vscale * a[i]));
-    }
-    ctx.strokeStyle = "black";
-    ctx.stroke();
-  }
-
   D = new Voice.SimpleMonoDriver({
     onerror: function (e) {
       console.error(e);
     }
   });
+
+  ///////////////////////////////////////////////////////////////////////////
 
   var opusSampleRate = 48000;
   var encoder = new Voice.OpusEncoder(opusSampleRate, 1, "voip");
@@ -49,4 +33,24 @@ function main () {
       targetPos += rawBuf.length;
     }
   };
+
+  ///////////////////////////////////////////////////////////////////////////
+
+  var graphCanvas = document.getElementById('graphCanvas');
+  var ctx = graphCanvas.getContext("2d");
+
+  D.onoutput = function (a) {
+    ctx.fillStyle = "#eeeeff";
+    ctx.fillRect(0, 0, graphCanvas.width, graphCanvas.height);
+    var hscale = graphCanvas.width / a.length;
+    var vofs = graphCanvas.height / 2;
+    var vscale = graphCanvas.height / 2;
+    ctx.beginPath();
+    ctx.moveTo(0, vofs);
+    for (var i = 0; i < a.length; i++) {
+      ctx.lineTo(i * hscale, vofs + (vscale * a[i]));
+    }
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+  }
 }
