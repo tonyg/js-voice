@@ -1,11 +1,65 @@
-function main () {
-  var AudioContext = (window.AudioContext || window.webkitAudioContext);
-  var getUserMedia =
-      (navigator.getUserMedia ||
-       navigator.webkitGetUserMedia ||
-       navigator.mozGetUserMedia ||
-       navigator.msGetUserMedia).bind(navigator);
+var AudioContext = (window.AudioContext || window.webkitAudioContext);
+var getUserMedia =
+    (navigator.getUserMedia ||
+     navigator.webkitGetUserMedia ||
+     navigator.mozGetUserMedia ||
+     navigator.msGetUserMedia).bind(navigator);
 
+function SimpleMonoDriver(options) {
+  var self = this;
+
+  options = options || {};
+  self.frameDuration = options.frameDuration || (1/100); // seconds
+  self.processorBufferSize = options.processorBufferSize || 1024;
+  self.inputBufferSeconds = options.inputBufferSeconds || 0.5;
+  self.outputBufferSeconds = options.outputBufferSeconds || 0.5;
+  self.onerror = options.onerror || null;
+  self.oninput = null;
+  self.onoutput = null;
+
+  self.context = new AudioContext();
+  self.sampleRate = self.context.sampleRate;
+  self.frameSize = Math.ceil(self.sampleRate * self.frameDuration);
+
+  self.inputBuffer = new Voice.CircularBuffer(self.sampleRate * self.inputBufferSeconds);
+  self.muxBuffer = new Voice.MuxBuffer(self.sampleRate * self.outputBufferSeconds);
+
+  getUserMedia(
+    {audio: true, video: false},
+    function (stream) {
+      self.stream = stream; // prevent GC of stream, which causes audio drops
+      self.sourceNode = self.context.createMediaStreamSource(stream);
+      self.processorNode = self.context.createScriptProcessor(self.processorBufferSize, 1, 1);
+
+      self.processorNode.onaudioprocess = function (e) {
+  	self.inputBuffer.writeFromChannel(e.inputBuffer, 0);
+	if (self.oninput) {
+	  self.oninput();
+	}
+
+	var channelDataBuffer = e.outputBuffer.getChannelData(0);
+	self.muxBuffer.readInto(channelDataBuffer);
+	if (self.onoutput) {
+	  self.onoutput(channelDataBuffer);
+	}
+      };
+
+      self.sourceNode.connect(self.processorNode);
+      self.processorNode.connect(self.context.destination);
+    },
+    function (err) {
+      if (self.onerror) {
+	self.onerror(err);
+      }
+    }
+  );
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+var D;
+
+function main () {
   var graphCanvas = document.getElementById('graphCanvas');
   var ctx = graphCanvas.getContext("2d");
 
@@ -24,55 +78,34 @@ function main () {
     ctx.stroke();
   }
 
-  getUserMedia(
-    {audio: true, video: false},
-    function (stream) {
-      var context = new AudioContext();
-
-      var frameDuration = 1 / 100;
-
-      var rawFrameSize = Math.ceil(context.sampleRate * frameDuration);
-
-      var opusSampleRate = 48000;
-      var opusFrameSize = Math.ceil(opusSampleRate * frameDuration);
-      var encoder = new Voice.OpusEncoder(opusSampleRate, 1, "voip");
-      encoder.setBitrate(16000);
-      var decoder = new Voice.OpusDecoder(opusSampleRate, 1);
-
-      var source = context.createMediaStreamSource(stream);
-      var processor = context.createScriptProcessor(1024, 1, 1);
-      var inBuf = new Voice.CircularBuffer(context.sampleRate * 0.5);
-      var outBuf = new Voice.CircularBuffer(context.sampleRate * 0.5);
-
-      var rawBuf = new Float32Array(rawFrameSize);
-      var frameBuf = new Float32Array(opusFrameSize);
-
-      preventGC = stream; // omg
-
-      var index = 0;
-      processor.onaudioprocess = function (e) {
-  	inBuf.writeFromChannel(e.inputBuffer, 0);
-
-  	while (inBuf.usedSpace() >= rawFrameSize) {
-  	  inBuf.readInto(rawBuf);
-  	  Voice.resample(frameBuf, opusSampleRate, rawBuf, context.sampleRate);
-  	  var encoded = encoder.encode(frameBuf);
-  	  var decoded = decoder.decode(encoded);
-  	  Voice.resample(rawBuf, context.sampleRate, decoded, opusSampleRate);
-  	  outBuf.write(rawBuf);
-  	}
-
-  	if (outBuf.usedSpace() >= e.outputBuffer.length) {
-  	  outBuf.readIntoChannel(e.outputBuffer, 0);
-	  chartData(e.outputBuffer.getChannelData(0));
-  	}
-      };
-
-      source.connect(processor);
-      processor.connect(context.destination);
-    },
-    function (err) {
-      console.error(err);
+  D = new SimpleMonoDriver({
+    onerror: function (e) {
+      console.error(e);
     }
-  );
+  });
+
+  var opusSampleRate = 48000;
+  var encoder = new Voice.OpusEncoder(opusSampleRate, 1, "voip");
+  encoder.setBitrate(16000);
+  var decoder = new Voice.OpusDecoder(opusSampleRate, 1);
+
+  var rawBuf = new Float32Array(D.frameSize);
+
+  var opusFrameSize = Math.ceil(opusSampleRate * D.frameDuration);
+  var frameBuf = new Float32Array(opusFrameSize);
+
+  var targetPos = D.muxBuffer.readPos + 2 * D.frameSize;
+  D.oninput = function () {
+    var inBuf = D.inputBuffer;
+    var muxBuf = D.muxBuffer;
+    while (inBuf.usedSpace() >= D.frameSize) {
+      inBuf.readInto(rawBuf);
+      Voice.resample(frameBuf, opusSampleRate, rawBuf, D.sampleRate);
+      var encoded = encoder.encode(frameBuf);
+      var decoded = decoder.decode(encoded);
+      Voice.resample(rawBuf, D.sampleRate, decoded, opusSampleRate);
+      muxBuf.write(rawBuf, targetPos);
+      targetPos += rawBuf.length;
+    }
+  };
 }
