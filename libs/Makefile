@@ -5,11 +5,10 @@ SRCDIR := ../src
 all: $(SRCDIR)/c_code.js
 
 $(SRCDIR)/c_code.js: \
-		speexdsp-git \
-		$(OPUS) \
 		$(SRCDIR)/c_code-pre.js \
 		$(SRCDIR)/c_code-post.js \
 		$(SRCDIR)/c_code.exports
+	$(MAKE) speexdsp-git $(OPUS)
 	emcc $(EMCC_OPTS) \
 		-s EXPORTED_FUNCTIONS="$$(cat $(SRCDIR)/c_code.exports)" \
 		-o $@ \
@@ -22,13 +21,13 @@ speexdsp-git:
 	unzip speexdsp-git.zip
 	(cd speexdsp-git; ./autogen.sh)
 	(cd speexdsp-git; emconfigure ./configure --prefix=`pwd`/dist)
-	(cd speexdsp-git; emmake make)
+	(cd speexdsp-git; emmake $(MAKE))
 
 $(OPUS): $(OPUS).tar.gz
 	tar -zxvf $<
 	(cd $(OPUS);\
 		emconfigure ./configure --prefix=`pwd`/dist; \
-		emmake make)
+		emmake $(MAKE))
 
 clean:
 
