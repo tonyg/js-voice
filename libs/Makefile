@@ -31,8 +31,10 @@ $(OPUS): $(OPUS).tar.gz
 		emmake make)
 
 clean:
+
+emclean: clean
 	rm -f $(SRCDIR)/c_code.js
 
-veryclean: clean
+veryclean: emclean
 	rm -rf speexdsp-git
 	rm -rf $(OPUS)

@@ -6,8 +6,8 @@ clean:
 	rm -f dist/*.js
 
 emclean: clean
-	make -C libs clean
+	make -C libs emclean
 
-veryclean: clean
+veryclean: emclean
 	make -C libs veryclean
 	rm -rf node_modules/
