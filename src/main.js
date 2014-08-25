@@ -508,7 +508,7 @@ function SimpleMonoDriver(options) {
   self.frameSize = Math.ceil(self.sampleRate * self.frameDuration);
 
   self.inputBuffer = new CircularBuffer(self.sampleRate * self.inputBufferSeconds);
-  self.muxBuffer = new MuxBuffer(self.sampleRate * self.outputBufferSeconds);
+  self.muxBuffer = null;
 
   getUserMedia(
     {audio: true, video: false},
@@ -516,6 +516,11 @@ function SimpleMonoDriver(options) {
       self.stream = stream; // prevent GC of stream, which causes audio drops
       self.sourceNode = self.context.createMediaStreamSource(stream);
       self.processorNode = self.context.createScriptProcessor(self.processorBufferSize, 1, 1);
+
+      // Create the muxBuffer here because we may have been
+      // arbitrarily delayed by the confirmation dialog waiting for
+      // the user.
+      self.muxBuffer = new MuxBuffer(self.sampleRate * self.outputBufferSeconds);
 
       self.processorNode.onaudioprocess = function (e) {
   	self.inputBuffer.writeFromChannel(e.inputBuffer, 0);
