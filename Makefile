@@ -1,5 +1,6 @@
 all:
 	$(MAKE) -C libs
+	mkdir -p dist/
 	npm install .
 
 clean:
